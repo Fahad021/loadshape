@@ -52,14 +52,14 @@ class Series(object):
         self.errors = []
         self.exclusions = []
         self.data_column = data_column
-        
+
         self.temp_units = temp_units.upper()
 
-        if isinstance(timezone, str) | (timezone == None):
+        if isinstance(timezone, str) | (timezone is None):
             self.timezone = utils.get_timezone(timezone)
         else:
             self.timezone = timezone
-        
+
         if isinstance(series, list):
             self.series = self.load_list(series)
         elif isinstance(series, str):
@@ -77,7 +77,7 @@ class Series(object):
         - if a step_size argument is present, data will be interpolated first
         """
         data = self.series
-        
+
         # capture start_at / end_at
         if (start_at != None) & (end_at != None):
             slice_data = True
@@ -98,7 +98,7 @@ class Series(object):
             data = [(e[0], round(e[1], 2)) for e in data]
 
         # if start_at / end_at were specified, slice data
-        if slice_data == True:
+        if slice_data:
             data = self._slice(list(data), start_at, end_at)
 
         # add in exclusions
@@ -168,12 +168,12 @@ class Series(object):
     # --- file writers --- #            
     def write_to_file(self, file_obj=None, file_name='series.csv',
                       start_at=None, end_at=None, exclude=True):
-        if file_obj == None: file_obj = open(file_name, 'w')
+        if file_obj is None: file_obj = open(file_name, 'w')
 
         for time, value in self.data(start_at=start_at, end_at=end_at, exclude=exclude):
             time = utils.int_to_datetime(time, self.timezone).strftime("%Y-%m-%d %H:%M:%S")
             file_obj.write("%s,%s\n" % (time, value))
-        
+
         file_obj.flush()
         return file_obj
 
@@ -247,13 +247,13 @@ class Series(object):
             - values must be floats or ints
         '''
         self.errors = []
-        
+
         for entry in self.series:
-            self._validate_entry_is_tuple(entry)            
+            self._validate_entry_is_tuple(entry)
             self._validate_timestamp_is_int(entry[0])
             self._validate_timestamp_format(entry[0])
             self._validate_value_numberness(entry[1])
-            if len(self.errors) > 0: break
-        
+            if self.errors: break
+
         if exception & len(self.errors) != 0: raise Exception(self.errors[0])
-        return True if len(self.errors) == 0 else False
+        return not self.errors

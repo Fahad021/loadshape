@@ -56,7 +56,7 @@ class Loadshape(object):
         logging.basicConfig(level=log_level)
         self.logger = logging.getLogger(__name__)
 
-        if timezone == None: self.logger.warn("Assuming timezone is OS default")
+        if timezone is None: self.logger.warn("Assuming timezone is OS default")
 
         self.timezone   = utils.get_timezone(timezone)
         self.model_dir  = path.join(path.dirname(path.abspath(__file__)), 'r')
@@ -67,7 +67,7 @@ class Loadshape(object):
         self.training_load_series           = self._get_series(load_data)
         self.training_temperature_series    = self._get_series(temp_data)
         self.forecast_temperature_series    = self._get_series(forecast_temp_data)
-        
+
         self._stderr = None
         self._stdout = None
 
@@ -106,9 +106,9 @@ class Loadshape(object):
             --intervalMinutes=INTERVALMINUTES
         """
         self._reset_derivative_data()
-    
+
         output_times = self._build_output_time_series(start_at, end_at, step_size)
-        
+
         # ----- write temporary files ----- #
         baseline_tmp    = tempfile.NamedTemporaryFile()
         error_stats_tmp = tempfile.NamedTemporaryFile()
@@ -117,23 +117,23 @@ class Loadshape(object):
 
         # ----- build command ----- #
         cmd = path.join(self.model_dir, 'baseline.R')
-        cmd += " --loadFile=%s"                 % power_tmp.name
-        cmd += " --timeStampFile=%s"            % prediction_tmp.name
-        cmd += " --outputBaselineFile=%s"       % baseline_tmp.name
-        cmd += " --errorStatisticsFile=%s"      % error_stats_tmp.name
-        cmd += " --timescaleDays=%s"            % weighting_days
-        cmd += " --intervalMinutes=%s"          % (modeling_interval / 60)
+        cmd += f" --loadFile={power_tmp.name}"
+        cmd += f" --timeStampFile={prediction_tmp.name}"
+        cmd += f" --outputBaselineFile={baseline_tmp.name}"
+        cmd += f" --errorStatisticsFile={error_stats_tmp.name}"
+        cmd += f" --timescaleDays={weighting_days}"
+        cmd += f" --intervalMinutes={modeling_interval / 60}"
 
         # ----- add in available temperature data ----- #
         if self.training_temperature_series != None:
             t_temp_tmp = self.training_temperature_series.write_to_tempfile()
-            cmd += " --temperatureFile=%s" % t_temp_tmp.name
+            cmd += f" --temperatureFile={t_temp_tmp.name}"
             f_flag = str(self.training_temperature_series.is_farenheit()).upper()
-            cmd += " --fahrenheit=%s" % f_flag
-            
+            cmd += f" --fahrenheit={f_flag}"
+
             if self.forecast_temperature_series != None:
                 ptemp_temp = self.forecast_temperature_series.write_to_tempfile()
-                cmd += " --predictTemperatureFile=%s" % ptemp_temp.name
+                cmd += f" --predictTemperatureFile={ptemp_temp.name}"
 
         # ----- run script ----- #
         self._run_script(cmd)
@@ -141,7 +141,7 @@ class Loadshape(object):
         # ----- process results ----- #
         self.baseline_series = Series(baseline_tmp.name, self.timezone)
         self.error_stats = self._read_error_stats(error_stats_tmp.name)
-        
+
         return self.baseline_series
 
     def cost(self, load_data=None, start_at=None, end_at=None, step_count=None):
@@ -158,8 +158,8 @@ class Loadshape(object):
             --demandResponseFile=DEMAND_RESPONSE_DATES
             --outputFile=OUTPUT_FILE
         """
-        if load_data == None: load_data = self.training_load_series
-        
+        if load_data is None: load_data = self.training_load_series
+
         if not isinstance(load_data, Series):
             raise Exception("load_data argument must be a Series object")
         if not isinstance(self.tariff, Tariff):
@@ -177,17 +177,17 @@ class Loadshape(object):
 
         # ----- build command ----- #
         cmd = path.join(self.model_dir, 'tariff.R')
-        cmd += " --loadFile=%s"             % load_tmp.name
-        cmd += " --tariffFile=%s"           % tariff_tmp.name
-        cmd += " --outputTimestampFile=%s"  % output_times_tmp.name
-        cmd += " --outputFile=%s"           % output_tmp.name
+        cmd += f" --loadFile={load_tmp.name}"
+        cmd += f" --tariffFile={tariff_tmp.name}"
+        cmd += f" --outputTimestampFile={output_times_tmp.name}"
+        cmd += f" --outputFile={output_tmp.name}"
 
         if len(self.tariff.dr_periods) > 0:
             dr_periods_tmp = self.tariff.write_dr_periods_to_tempfile()
-            cmd += " --demandResponseFile=%s" % dr_periods_tmp.name
+            cmd += f" --demandResponseFile={dr_periods_tmp.name}"
 
         self._run_script(cmd)
-        
+
         # ----- process results ----- #
         cost_series             = Series(output_tmp.name, self.timezone, data_column=1)
         cumulative_cost_series  = Series(output_tmp.name, self.timezone, data_column=2)
@@ -209,8 +209,8 @@ class Loadshape(object):
             --outputFile=OUTPUT_DIFF_FILE
             --predictedBaselineOutputFile=OUTPUT_BASE_FILE
         """
-        if self.baseline_series == None: self.baseline()
-        
+        if self.baseline_series is None: self.baseline()
+
         output_times = self._build_output_time_series(start_at, end_at,
                                                       step_size, step_count)
 
@@ -220,15 +220,15 @@ class Loadshape(object):
         output_times_tmp    = output_times.write_to_tempfile()
         output_diff_tmp     = tempfile.NamedTemporaryFile()
         output_base_tmp     = tempfile.NamedTemporaryFile()
-        
+
         # ----- build command ----- #
         cmd = path.join(self.model_dir, 'diff.R')
-        cmd += " --loadFile=%s"                     % load_tmp.name
-        cmd += " --baselineFile=%s"                 % baseline_tmp.name
-        cmd += " --outputTimesFile=%s"              % output_times_tmp.name
-        cmd += " --outputFile=%s"                   % output_diff_tmp.name
-        cmd += " --predictedBaselineOutputFile=%s"  % output_base_tmp.name
-        
+        cmd += f" --loadFile={load_tmp.name}"
+        cmd += f" --baselineFile={baseline_tmp.name}"
+        cmd += f" --outputTimesFile={output_times_tmp.name}"
+        cmd += f" --outputFile={output_diff_tmp.name}"
+        cmd += f" --predictedBaselineOutputFile={output_base_tmp.name}"
+
         # ----- run script ----- #
         self._run_script(cmd)
 
@@ -260,8 +260,7 @@ class Loadshape(object):
         cumulative_kwh_base_series = diff_data[3]
 
         # extract data from diff series
-        ep = {}
-        ep["avg_kw_shed"]           = kw_diff_series.values()[-1] * -1
+        ep = {"avg_kw_shed": kw_diff_series.values()[-1] * -1}
         avg_kw_base                 = kw_base_series.values()[-1]
         ep["avg_percent_kw_shed"]   = (ep["avg_kw_shed"] / avg_kw_base) * 100
         ep["kwh_reduction"]         = cumulative_kwh_diff_series.values()[-1] * -1
@@ -300,11 +299,10 @@ class Loadshape(object):
         """return accumulated sum of differences bewetween baseline and actual
         energy. Returns a series.
         """
-        if self.baseline_series == None: self.baseline()
+        if self.baseline_series is None: self.baseline()
 
         diff_data = self.diff(start_at, end_at, step_size)
-        cumulative_kwh_diff_series = diff_data[2]
-        return cumulative_kwh_diff_series    
+        return diff_data[2]    
 
     def _run_script(self, command):
         self.logger.info("Running R script...")
@@ -354,7 +352,7 @@ class Loadshape(object):
         - if the data arg is a string: attempt to build Series from file path
         - if the data arg is a List: attempt to build Series from list
         """
-        if (isinstance(data, Series)) | (data == None):
+        if (isinstance(data, Series)) | (data is None):
             return data
         else:
             return Series(data, self.timezone, self.temp_units)
@@ -368,9 +366,9 @@ class Loadshape(object):
         - default prediction step is 900s
         - step_count will trump step_size
         """
-        if start_at == None: start_at = self.training_load_series.start_at()
-        if end_at == None: end_at = self.training_load_series.end_at()
-        
+        if start_at is None: start_at = self.training_load_series.start_at()
+        if end_at is None: end_at = self.training_load_series.end_at()
+
         start_at = utils.read_timestamp(start_at, self.timezone)
         end_at = utils.read_timestamp(end_at, self.timezone)
 
@@ -380,7 +378,7 @@ class Loadshape(object):
 
         p_data = range(start_at, end_at+1, step_size)
         p_data = [(v, 0) for v in p_data]
-        
+
         return Series(p_data, self.timezone)
 
     def _read_error_stats(self, error_stats_file):

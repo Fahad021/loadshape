@@ -50,7 +50,7 @@ class Tariff(object):
         logging.basicConfig(level=log_level)
         self.logger = logging.getLogger(__name__)
 
-        if timezone == None: self.logger.warn("Assuming timezone is OS default")
+        if timezone is None: self.logger.warn("Assuming timezone is OS default")
         self.timezone           = utils.get_timezone(timezone)
 
         self.tariff_file        = None
@@ -123,7 +123,7 @@ class Tariff(object):
 
     # --- file writers --- #            
     def write_tariff_to_file(self, file_obj=None, file_name='tariff.csv'):
-        if file_obj == None: file_obj = open(file_name, 'w')
+        if file_obj is None: file_obj = open(file_name, 'w')
 
         # write price structure
         file_obj.write("# rate structure\n")
@@ -139,7 +139,7 @@ class Tariff(object):
         if self.weekend_schedule():
             file_obj.write("# weekend schedule\n")
             for day in self.weekend_schedule(): file_obj.write("%s\n" % day)
-        
+
         if self.dr_day_schedule():
             file_obj.write("# dr day schedule\n")
             for day in self.dr_day_schedule(): file_obj.write("%s\n" % day)
@@ -152,7 +152,7 @@ class Tariff(object):
         return self.write_tariff_to_file(tmp_file)
 
     def write_dr_periods_to_file(self, file_obj=None, file_name='dr_periods.csv'):
-        if file_obj == None: file_obj = open(file_name, 'w')
+        if file_obj is None: file_obj = open(file_name, 'w')
 
         for period in self.dr_periods:
             start_at = utils.int_to_datetime(period[0], self.timezone).strftime("%Y-%m-%d %H:%M:%S")

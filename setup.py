@@ -44,9 +44,9 @@ if len(RHOME) == 0: raise RuntimeError("Please make sure R is installed.")
 # ----- check R package dependencies ----- #
 RPACKAGES = ['optparse']
 for package in RPACKAGES:
-    exit_code = subprocess.call(["Rscript", "-e", ("library('%s')" % package)])
+    exit_code = subprocess.call(["Rscript", "-e", f"library('{package}')"])
     if exit_code != 0:
-        raise RuntimeError("Please make sure the R package '%s' is installed." % package)
+        raise RuntimeError(f"Please make sure the R package '{package}' is installed.")
 
 setup(name='loadshape',
       packages=find_packages(exclude=['tests']),
